@@ -24,13 +24,13 @@ pub fn generate_cuboids(obstacle_polygons: &mut ObstaclePolygons) -> Vec<(Transf
     let mut transforms_and_scales = Vec::new();
 
     for _ in 0..120 {
-        let scale_x = rng.gen_range(0.5..2.0);
+        let scale_x = rng.gen_range(0.75..2.25);
         let scale_y = 1.0;
-        let scale_z = rng.gen_range(0.5..2.0);
+        let scale_z = rng.gen_range(0.75..2.25);
 
-        let x = rng.gen_range(-40.0..40.0);
+        let x = rng.gen_range(-60.0..60.0);
         let y = 0.5;
-        let z = rng.gen_range(-40.0..40.0);
+        let z = rng.gen_range(-60.0..60.0);
 
         let rotation_x = 0.0;
         let rotation_y = rng.gen_range(0.0..std::f32::consts::PI * 2.0);
@@ -105,10 +105,18 @@ pub fn render_cuboids(
     materials: &mut ResMut<Assets<StandardMaterial>>,
     transforms_and_scales: Vec<(Transform, Vec3)>,
 ) {
+    let mut rng = rand::thread_rng();
+
     for (transform, scale) in transforms_and_scales {
+        // Generate random RGB values between 0.0 and 1.0
+        let random_color = Color::srgb(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>());
+
         commands.spawn(PbrBundle {
             mesh: meshes.add(Cuboid::new(scale.x, scale.y, scale.z)),
-            material: materials.add(Color::BLACK),
+            material: materials.add(StandardMaterial {
+                base_color: random_color,
+                ..default()
+            }),
             transform,
             ..default()
         });

@@ -127,7 +127,7 @@ fn setup(
 
     commands.spawn((
         PbrBundle {
-            mesh: meshes.add(Plane3d::default().mesh().size(80., 80.)),
+            mesh: meshes.add(Plane3d::default().mesh().size(120., 120.)),
             material: materials.add(Color::srgb(0.3, 0.5, 0.3)),
             ..default()
         },
