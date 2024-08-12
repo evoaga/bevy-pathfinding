@@ -1,7 +1,18 @@
 mod camera;
+mod cursor;
 mod obstacles;
 mod pathfinding;
 mod player;
+mod player_action;
+mod player_gizmos;
+mod player_movement;
+mod player_stats;
+
+pub use player::*;
+pub use player_action::*;
+pub use player_gizmos::*;
+pub use player_movement::*;
+pub use player_stats::*;
 mod utils;
 
 use crate::pathfinding::NavMesh;
@@ -11,14 +22,14 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
+use cursor::*;
 use obstacles::*;
-use player::*;
 
 #[derive(Component)]
 struct FpsText;
 
 #[derive(Component)]
-struct Ground;
+pub struct Ground;
 
 fn main() {
     App::new()
@@ -32,11 +43,11 @@ fn main() {
             }),
             FrameTimeDiagnosticsPlugin,
         ))
-        .insert_resource(camera::CameraFollowToggle(true))
-        .insert_resource(TargetPosition(None))
+        .insert_resource(player::TargetPosition(None))
         .insert_resource(player::GizmoPath(None))
+        .insert_resource(camera::CameraFollowToggle(true))
         .insert_resource(camera::CameraZoom(10.0))
-        .insert_resource(CursorPosition::default())
+        .insert_resource(cursor::CursorPosition::default())
         .add_systems(Startup, setup)
         .add_systems(
             Update,
@@ -49,8 +60,8 @@ fn main() {
                 camera::camera_edge_pan,
                 camera::camera_zoom,
                 move_player_with_wasd,
-                update_cursor_position,
                 draw_cursor,
+                cast_q_spell,
             ),
         )
         .run();
@@ -105,6 +116,8 @@ fn setup(
             ..default()
         },
         Player,
+        PlayerStats::new(5.0, 100.0, 1.0),
+        PlayerAction::new(),
     ));
 
     commands.spawn(Camera3dBundle {
@@ -163,53 +176,5 @@ fn text_update_system(
                 text.sections[1].value = format!("{value:.2}");
             }
         }
-    }
-}
-
-#[derive(Resource, Default)]
-struct CursorPosition {
-    position: Option<Vec3>,
-}
-
-fn update_cursor_position(
-    mut cursor_position: ResMut<CursorPosition>,
-    mouse_button_input: Res<ButtonInput<MouseButton>>,
-    camera_query: Query<(&Camera, &GlobalTransform)>,
-    ground_query: Query<&GlobalTransform, With<Ground>>,
-    windows: Query<&Window>,
-) {
-    if mouse_button_input.just_pressed(MouseButton::Right) {
-        let (camera, camera_transform) = camera_query.single();
-        let ground = ground_query.single();
-
-        if let Some(cursor_position_2d) = windows.single().cursor_position() {
-            // Calculate a ray pointing from the camera into the world based on the cursor's position.
-            if let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position_2d) {
-                // Calculate if and where the ray is hitting the ground plane.
-                if let Some(distance) =
-                    ray.intersect_plane(ground.translation(), InfinitePlane3d::new(ground.up()))
-                {
-                    let point = ray.get_point(distance);
-                    cursor_position.position = Some(point);
-                }
-            }
-        }
-    }
-}
-
-fn draw_cursor(
-    cursor_position: Res<CursorPosition>,
-    ground_query: Query<&GlobalTransform, With<Ground>>,
-    mut gizmos: Gizmos,
-) {
-    if let Some(position) = cursor_position.position {
-        let ground = ground_query.single();
-        // Draw a circle just above the ground plane at the stored position.
-        gizmos.circle(
-            position + ground.up() * 0.01,
-            ground.up(),
-            0.3,
-            Color::srgb(0.0, 0.0, 0.5),
-        );
     }
 }

@@ -102,6 +102,8 @@ pub fn line_intersects_polygon_with_vertex_check(
     polygon: &Polygon,
 ) -> bool {
     let n = polygon.vertices.len();
+    let mut line_start_on_edge = false;
+    let mut line_start_edge_index = None;
     let mut line_start_index = None;
     let mut line_end_index = None;
 
@@ -120,6 +122,35 @@ pub fn line_intersects_polygon_with_vertex_check(
         // Calculate if they are neighbors (i.e., consecutive in the vertex list)
         if (start_idx + 1) % n != end_idx && start_idx != (end_idx + 1) % n {
             return true;
+        }
+    }
+
+    // Check if line_start is on an edge of the polygon (but not on a vertex)
+    for i in 0..n {
+        let next_i = (i + 1) % n;
+        let v1 = &polygon.vertices[i];
+        let v2 = &polygon.vertices[next_i];
+
+        if on_segment(v1, v2, line_start) && line_start != v1 && line_start != v2 {
+            line_start_on_edge = true;
+            line_start_edge_index = Some(i);
+            break;
+        }
+    }
+
+    if line_start_on_edge {
+        // Check if line_end is on a vertex of the polygon
+        for (i, vertex) in polygon.vertices.iter().enumerate() {
+            if line_end == vertex {
+                // If line_end is on a vertex, check if it's a vertex of the edge line_start is on
+                if let Some(start_edge_index) = line_start_edge_index {
+                    let next_index = (start_edge_index + 1) % n;
+                    if i == start_edge_index || i == next_index {
+                        return false;
+                    }
+                }
+                return true;
+            }
         }
     }
 
