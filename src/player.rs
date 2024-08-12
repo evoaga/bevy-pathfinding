@@ -15,6 +15,11 @@ pub struct TargetPosition(pub Option<Vec<Vec3>>);
 #[derive(Resource)]
 pub struct GizmoPath(pub Option<Vec<Vec3>>);
 
+#[derive(Resource, Default)]
+pub struct LastTargetPosition(pub Option<Vec3>);
+
+const SIGNIFICANT_CHANGE_THRESHOLD: f32 = 0.5;
+
 pub fn move_player(
     windows: Query<&Window>,
     buttons: Res<ButtonInput<MouseButton>>,
@@ -26,9 +31,10 @@ pub fn move_player(
     time: Res<Time>,
     obstacle_polygons: Res<ObstaclePolygons>,
     mut nav_mesh: ResMut<NavMesh>,
+    mut last_target_position: ResMut<LastTargetPosition>,
 ) {
     // Handle right-click for setting the movement target
-    if buttons.just_pressed(MouseButton::Right) {
+    if buttons.pressed(MouseButton::Right) {
         let (camera, camera_transform) = camera_query.single();
         let ground = ground_query.single();
         let (player_transform, player_action, player_stats) = player_query.single_mut();
@@ -66,30 +72,43 @@ pub fn move_player(
                     }
 
                     if !intersects {
+                        // If no intersection, directly set the target position
                         target_position.0 = Some(vec![goal_position]);
                         gizmo_path.0 = Some(vec![goal_position]);
                     } else {
-                        // Start timing the theta_star calculation
-                        let start_time = Instant::now();
+                        // If there is an intersection, check for significant change
+                        let significant_change = match last_target_position.0 {
+                            Some(last_position) => {
+                                goal_position.distance(last_position) > SIGNIFICANT_CHANGE_THRESHOLD
+                            }
+                            None => true, // If there's no last position, any new position is significant
+                        };
 
-                        let path = theta_star(
-                            &mut nav_mesh,
-                            start_position,
-                            goal_point,
-                            &obstacle_polygons.polygons,
-                        );
+                        if significant_change {
+                            last_target_position.0 = Some(goal_position);
 
-                        // Calculate the duration and print it
-                        let duration = start_time.elapsed().as_secs_f64();
-                        println!("theta_star calculation took: {:?}", duration);
+                            // Start timing the theta_star calculation
+                            let start_time = Instant::now();
 
-                        if !path.is_empty() {
-                            target_position.0 =
-                                Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
-                            gizmo_path.0 =
-                                Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
-                        } else {
-                            println!("No valid path found.");
+                            let path = theta_star(
+                                &mut nav_mesh,
+                                start_position,
+                                goal_point,
+                                &obstacle_polygons.polygons,
+                            );
+
+                            // Calculate the duration and print it
+                            let duration = start_time.elapsed().as_secs_f64();
+                            println!("theta_star calculation took: {:?}", duration);
+
+                            if !path.is_empty() {
+                                target_position.0 =
+                                    Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
+                                gizmo_path.0 =
+                                    Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
+                            } else {
+                                println!("No valid path found.");
+                            }
                         }
                     }
                 }

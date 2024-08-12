@@ -48,6 +48,7 @@ fn main() {
         .insert_resource(camera::CameraFollowToggle(true))
         .insert_resource(camera::CameraZoom(10.0))
         .insert_resource(cursor::CursorPosition::default())
+        .insert_resource(player::LastTargetPosition(None))
         .add_systems(Startup, setup)
         .add_systems(
             Update,

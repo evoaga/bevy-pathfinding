@@ -146,12 +146,28 @@ pub fn line_intersects_polygon_with_vertex_check(
                 if let Some(start_edge_index) = line_start_edge_index {
                     let next_index = (start_edge_index + 1) % n;
                     if i == start_edge_index || i == next_index {
-                        return false;
+                        return false; // line_start and line_end are on the same edge
                     }
                 }
+                // Otherwise, continue to intersection check
+            }
+        }
+        // If line_end is not on a vertex, assume it's outside and directly check for any edge intersection
+        for i in 0..n {
+            let next_i = (i + 1) % n;
+            let v1 = &polygon.vertices[i];
+            let v2 = &polygon.vertices[next_i];
+
+            // Skip the edge that contains line_start
+            if Some(i) == line_start_edge_index {
+                continue;
+            }
+
+            if do_lines_intersect(line_start, line_end, v1, v2) {
                 return true;
             }
         }
+        return false;
     }
 
     // Check if the line intersects with any of the polygon's edges
