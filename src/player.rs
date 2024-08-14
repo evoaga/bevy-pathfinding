@@ -37,7 +37,7 @@ pub fn move_player(
     if buttons.pressed(MouseButton::Right) {
         let (camera, camera_transform) = camera_query.single();
         let ground = ground_query.single();
-        let (player_transform, player_action, player_stats) = player_query.single_mut();
+        let (player_transform, player_action, _player_stats) = player_query.single_mut();
 
         // Skip movement if the player is casting or has an active Q spell
         if player_action.is_casting || player_action.casting_q {

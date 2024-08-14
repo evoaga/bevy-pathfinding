@@ -22,7 +22,6 @@ use bevy::{
     prelude::*,
     window::PresentMode,
 };
-use cursor::*;
 use obstacles::*;
 
 #[derive(Component)]
@@ -53,16 +52,16 @@ fn main() {
         .add_systems(
             Update,
             (
-                draw_path_gizmos,
-                text_update_system,
-                move_player,
+                cursor::draw_cursor,
+                player::move_player,
                 camera::camera_follow,
                 camera::toggle_camera_follow,
                 camera::camera_edge_pan,
                 camera::camera_zoom,
-                move_player_with_wasd,
-                draw_cursor,
-                cast_q_spell,
+                player_movement::move_player_with_wasd,
+                player_action::cast_q_spell,
+                draw_path_gizmos,
+                text_update_system,
             ),
         )
         .run();
