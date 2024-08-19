@@ -53,7 +53,8 @@ fn main() {
             Update,
             (
                 cursor::draw_cursor,
-                player::move_player,
+                player::handle_right_click_set_target_position,
+                player::move_player_towards_target,
                 camera::camera_follow,
                 camera::toggle_camera_follow,
                 camera::camera_edge_pan,
