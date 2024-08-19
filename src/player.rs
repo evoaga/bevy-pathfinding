@@ -2,7 +2,7 @@ use crate::obstacles::ObstaclePolygons;
 use crate::pathfinding::{theta_star, NavMesh};
 use crate::player_action::PlayerAction;
 use crate::player_stats::PlayerStats;
-use crate::utils::{does_line_intersect_polygon, Point};
+use crate::utils::{does_line_intersect_polygon, Point, Polygon};
 use bevy::prelude::*;
 use std::time::Instant;
 
@@ -74,42 +74,65 @@ pub fn handle_right_click_set_target_position(
         z: goal_position.z,
     };
 
+    // Option to hold the first intersecting polygon
+    let mut first_intersecting_polygon: Option<Polygon> = None;
+    let mut multiple_intersections = false;
+
     for polygon in &obstacle_polygons.polygons {
         if does_line_intersect_polygon(&start_position, &goal_point, polygon) {
-            let significant_change = match last_target_position.0 {
-                Some(last_position) => {
-                    goal_position.distance(last_position) > SIGNIFICANT_CHANGE_THRESHOLD
-                }
-                None => true,
-            };
-
-            if !significant_change {
-                return;
+            if first_intersecting_polygon.is_some() {
+                multiple_intersections = true;
+                break;
+            } else {
+                first_intersecting_polygon = Some(polygon.clone());
             }
+        }
+    }
 
-            last_target_position.0 = Some(goal_position);
+    if first_intersecting_polygon.is_some() || multiple_intersections {
+        let significant_change = match last_target_position.0 {
+            Some(last_position) => {
+                goal_position.distance(last_position) > SIGNIFICANT_CHANGE_THRESHOLD
+            }
+            None => true,
+        };
 
-            let start_time = Instant::now();
+        if !significant_change {
+            return;
+        }
 
-            let path = theta_star(
+        last_target_position.0 = Some(goal_position);
+
+        let start_time = Instant::now();
+
+        // Decide whether to use a single polygon or all polygons
+        let path = if multiple_intersections {
+            theta_star(
                 &mut nav_mesh,
                 start_position,
                 goal_point,
                 &obstacle_polygons.polygons,
-            );
+            )
+        } else {
+            theta_star(
+                &mut nav_mesh,
+                start_position,
+                goal_point,
+                &[first_intersecting_polygon.unwrap()],
+            )
+        };
 
-            let duration = start_time.elapsed().as_secs_f64();
-            println!("theta_star calculation took: {:?}", duration);
+        let duration = start_time.elapsed().as_secs_f64();
+        println!("theta_star calculation took: {:?}", duration);
 
-            if path.is_empty() {
-                println!("No valid path found.");
-                return;
-            }
-
-            target_position.0 = Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
-            gizmo_path.0 = Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
+        if path.is_empty() {
+            println!("No valid path found.");
             return;
         }
+
+        target_position.0 = Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
+        gizmo_path.0 = Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
+        return;
     }
 
     target_position.0 = Some(vec![goal_position]);
