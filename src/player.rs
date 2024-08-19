@@ -2,7 +2,7 @@ use crate::obstacles::ObstaclePolygons;
 use crate::pathfinding::{theta_star, NavMesh};
 use crate::player_action::PlayerAction;
 use crate::player_stats::PlayerStats;
-use crate::utils::{does_line_intersect_polygon, Point, Polygon};
+use crate::utils::{does_line_intersect_polygon, Point};
 use bevy::prelude::*;
 use std::time::Instant;
 
@@ -74,59 +74,46 @@ pub fn handle_right_click_set_target_position(
         z: goal_position.z,
     };
 
-    let mut intersecting_polygons: Vec<&Polygon> = vec![];
-
     for polygon in &obstacle_polygons.polygons {
         if does_line_intersect_polygon(&start_position, &goal_point, polygon) {
-            intersecting_polygons.push(polygon);
+            let significant_change = match last_target_position.0 {
+                Some(last_position) => {
+                    goal_position.distance(last_position) > SIGNIFICANT_CHANGE_THRESHOLD
+                }
+                None => true,
+            };
+
+            if !significant_change {
+                return;
+            }
+
+            last_target_position.0 = Some(goal_position);
+
+            let start_time = Instant::now();
+
+            let path = theta_star(
+                &mut nav_mesh,
+                start_position,
+                goal_point,
+                &obstacle_polygons.polygons,
+            );
+
+            let duration = start_time.elapsed().as_secs_f64();
+            println!("theta_star calculation took: {:?}", duration);
+
+            if path.is_empty() {
+                println!("No valid path found.");
+                return;
+            }
+
+            target_position.0 = Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
+            gizmo_path.0 = Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
+            return;
         }
     }
 
-    if intersecting_polygons.is_empty() {
-        target_position.0 = Some(vec![goal_position]);
-        gizmo_path.0 = Some(vec![goal_position]);
-        return;
-    }
-
-    let significant_change = match last_target_position.0 {
-        Some(last_position) => goal_position.distance(last_position) > SIGNIFICANT_CHANGE_THRESHOLD,
-        None => true,
-    };
-
-    if !significant_change {
-        return;
-    }
-
-    last_target_position.0 = Some(goal_position);
-
-    let start_time = Instant::now();
-
-    let path = if intersecting_polygons.len() == 1 {
-        theta_star(
-            &mut nav_mesh,
-            start_position,
-            goal_point,
-            &[intersecting_polygons[0].clone()],
-        )
-    } else {
-        theta_star(
-            &mut nav_mesh,
-            start_position,
-            goal_point,
-            &obstacle_polygons.polygons,
-        )
-    };
-
-    let duration = start_time.elapsed().as_secs_f64();
-    println!("theta_star calculation took: {:?}", duration);
-
-    if path.is_empty() {
-        println!("No valid path found.");
-        return;
-    }
-
-    target_position.0 = Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
-    gizmo_path.0 = Some(path.iter().map(|p| Vec3::new(p.x, p.y, p.z)).collect());
+    target_position.0 = Some(vec![goal_position]);
+    gizmo_path.0 = Some(vec![goal_position]);
 }
 
 pub fn move_player_towards_target(
