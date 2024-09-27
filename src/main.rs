@@ -23,7 +23,6 @@ use bevy::{
     window::PresentMode,
 };
 use obstacles::*;
-
 #[derive(Component)]
 struct FpsText;
 
@@ -35,7 +34,7 @@ fn main() {
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    present_mode: PresentMode::Mailbox,
+                    present_mode: PresentMode::Immediate,
                     ..default()
                 }),
                 ..default()
