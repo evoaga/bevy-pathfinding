@@ -1,6 +1,5 @@
 use crate::obstacles::ObstaclePolygons;
 use crate::pathfinding::{theta_star, NavMesh};
-use crate::player_action::PlayerAction;
 use crate::player_stats::PlayerStats;
 use crate::utils::{does_line_intersect_polygon, Point, Polygon};
 use bevy::prelude::*;
@@ -25,7 +24,7 @@ pub fn handle_right_click_set_target_position(
     buttons: Res<ButtonInput<MouseButton>>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
     ground_query: Query<&GlobalTransform, With<crate::Ground>>,
-    mut player_query: Query<(&Transform, &PlayerAction, &PlayerStats), With<Player>>,
+    mut player_query: Query<(&Transform, &PlayerStats), With<Player>>,
     mut target_position: ResMut<TargetPosition>,
     mut gizmo_path: ResMut<GizmoPath>,
     obstacle_polygons: Res<ObstaclePolygons>,
@@ -38,11 +37,7 @@ pub fn handle_right_click_set_target_position(
 
     let (camera, camera_transform) = camera_query.single();
     let ground = ground_query.single();
-    let (player_transform, player_action, _player_stats) = player_query.single_mut();
-
-    if player_action.is_casting || player_action.casting_q {
-        return;
-    }
+    let (player_transform, _player_stats) = player_query.single_mut();
 
     let cursor_position = match windows.single().cursor_position() {
         Some(pos) => pos,
@@ -140,7 +135,7 @@ pub fn handle_right_click_set_target_position(
 }
 
 pub fn move_player_towards_target(
-    mut player_query: Query<(&mut Transform, &PlayerAction, &PlayerStats), With<Player>>,
+    mut player_query: Query<(&mut Transform, &PlayerStats), With<Player>>,
     mut target_position: ResMut<TargetPosition>,
     mut gizmo_path: ResMut<GizmoPath>,
     time: Res<Time>,
@@ -150,11 +145,7 @@ pub fn move_player_towards_target(
         _ => return,
     };
 
-    let (mut player_transform, player_action, player_stats) = player_query.single_mut();
-
-    if player_action.is_casting || player_action.casting_q {
-        return;
-    }
+    let (mut player_transform, player_stats) = player_query.single_mut();
 
     let target = path[0];
 

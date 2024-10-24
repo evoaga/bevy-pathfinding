@@ -3,13 +3,11 @@ mod cursor;
 mod obstacles;
 mod pathfinding;
 mod player;
-mod player_action;
 mod player_gizmos;
 mod player_movement;
 mod player_stats;
 
 pub use player::*;
-pub use player_action::*;
 pub use player_gizmos::*;
 pub use player_movement::*;
 pub use player_stats::*;
@@ -59,7 +57,6 @@ fn main() {
                 camera::camera_edge_pan,
                 camera::camera_zoom,
                 player_movement::move_player_with_wasd,
-                player_action::cast_q_spell,
                 draw_path_gizmos,
                 text_update_system,
             ),
@@ -117,7 +114,6 @@ fn setup(
         },
         Player,
         PlayerStats::new(5.0, 100.0, 1.0),
-        PlayerAction::new(),
     ));
 
     commands.spawn(Camera3dBundle {
